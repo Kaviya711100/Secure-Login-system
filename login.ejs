@@ -1,0 +1,80 @@
+const express = require('express');
+const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
+const bodyParser = require('body-parser');
+const zxcvbn = require('zxcvbn');
+const User = require('./models/User');
+
+const app = express();
+app.set('view engine', 'ejs');
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// ✅ Connect to MongoDB
+mongoose.connect('mongodb://127.0.0.1:27017/secureLogin', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+}).then(() => console.log('✅ MongoDB connected'))
+  .catch(err => console.log(err));
+
+// 🔹 Home route redirects to signup
+app.get('/', (req, res) => res.redirect('/signup'));
+
+// 🔹 Signup page
+app.get('/signup', (req, res) => {
+  res.render('signup', { message: null });
+});
+
+// 🔹 Handle signup
+app.post('/signup', async (req, res) => {
+  const { username, password } = req.body;
+
+  // Check password strength using zxcvbn
+  const result = zxcvbn(password);
+  if (result.score < 3) {
+    return res.render('signup', { message: '❌ Password too weak! Please follow suggestions.' });
+  }
+
+  try {
+    // Hash the password securely
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Save user to MongoDB
+    const newUser = new User({ username, password: hashedPassword });
+    await newUser.save();
+
+    res.send('✅ Signup successful! <a href="/login">Go to Login</a>');
+  } catch (err) {
+    console.error(err);
+    res.render('signup', { message: '⚠️ Username already exists or server error.' });
+  }
+});
+
+// 🔹 Login page
+app.get('/login', (req, res) => {
+  res.render('login', { message: null });
+});
+
+// 🔹 Handle login
+app.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    const user = await User.findOne({ username });
+    if (!user) return res.render('login', { message: '❌ User not found' });
+
+    // Compare entered password with hashed password
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.render('login', { message: '❌ Invalid password' });
+
+    res.send(`✅ Welcome, ${username}! You have logged in successfully.`);
+  } catch (err) {
+    console.error(err);
+    res.render('login', { message: '⚠️ Server error. Try again.' });
+  }
+});
+
+// 🔹 Start the server
+const PORT = 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
+});

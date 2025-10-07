@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Signup</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/zxcvbn/4.4.2/zxcvbn.js"></script>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; background-color:#f0f4f8; display:flex; justify-content:center; align-items:center; height:100vh; margin:0; }
+    .container { background-color:#fff; padding:30px 40px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.1); width:350px; text-align:center; }
+    h2 { color:#1e293b; margin-bottom:20px; }
+    input { width:90%; padding:10px; margin:10px 0; border-radius:6px; border:1px solid #cbd5e1; font-size:14px; }
+    button { width:95%; padding:10px; margin-top:15px; border:none; border-radius:6px; background-color:#2563eb; color:white; font-weight:bold; cursor:pointer; font-size:15px; }
+    button:hover { background-color:#1e40af; }
+    a { color:#2563eb; text-decoration:none; }
+    a:hover { text-decoration:underline; }
+    .message { color:red; margin:10px 0; font-size:14px; }
+    #strengthBar { width:90%; height:10px; margin-top:5px; border-radius:5px; overflow:hidden; }
+    #strengthFeedback { font-size:13px; margin-top:5px; color:#1e293b; text-align:left; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🔐 Create Account</h2>
+    <% if (message) { %>
+      <p class="message"><%= message %></p>
+    <% } %>
+    <form method="POST" action="/signup" onsubmit="return validatePassword()">
+      <input type="text" name="username" placeholder="Username" required><br>
+      <input type="password" name="password" id="password" placeholder="Password" oninput="checkStrength()" required><br>
+      <progress id="strengthBar" max="4" value="0"></progress>
+      <div id="strengthFeedback"></div>
+      <button type="submit">Sign Up</button>
+    </form>
+    <p style="margin-top:15px;">Already have an account? <a href="/login">Login</a></p>
+  </div>
+
+  <script>
+    function checkStrength() {
+      const pwd = document.getElementById('password').value;
+      const result = zxcvbn(pwd);
+      const bar = document.getElementById('strengthBar');
+      const feedback = document.getElementById('strengthFeedback');
+
+      bar.value = result.score;
+      const colors = ['#ef4444','#f97316','#facc15','#22c55e','#16a34a'];
+      bar.style.backgroundColor = colors[result.score];
+
+      // Custom rules
+      const uppercase = /[A-Z]/.test(pwd) ? "✅ Contains uppercase" : "❌ Needs uppercase";
+      const number = /[0-9]/.test(pwd) ? "✅ Contains number" : "❌ Needs number";
+      const special = /[!@#$%^&*(),.?\":{}|<>]/.test(pwd) ? "✅ Contains special char" : "❌ Needs special char";
+
+      let suggestions = result.feedback.suggestions.join('<br>');
+      if(!suggestions) suggestions="Good password!";
+
+      feedback.innerHTML = `${uppercase}<br>${number}<br>${special}<br><b>Strength:</b> ${['Very Weak','Weak','Fair','Strong','Very Strong'][result.score]}<br>${suggestions}`;
+    }
+
+    function validatePassword() {
+      const pwd = document.getElementById('password').value;
+      const uppercase = /[A-Z]/.test(pwd);
+      const number = /[0-9]/.test(pwd);
+      const special = /[!@#$%^&*(),.?\":{}|<>]/.test(pwd);
+      if(!uppercase || !number || !special || pwd.length<8){
+        alert("❌ Password does not meet requirements!");
+        return false;
+      }
+      return true;
+    }
+  </script>
+</body>
+</html>
